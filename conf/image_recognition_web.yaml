@@ -1,0 +1,5 @@
+mysql:
+   dsn: "root:caoge@tcp(127.0.0.1:3306)/image_recognition"
+   active: 10
+   idle: 10
+   idle_timeout: 3600s
