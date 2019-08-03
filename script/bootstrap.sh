@@ -9,4 +9,4 @@ fi
 export GODEBUG=netdns=cgo
 export ENV_PSM="image.recognition.web"
 
-exec ${CURDIR}/bin/image-recognition -addr 0.0.0.0 -port 8080 -conf ${CURDIR}/conf
+exec ${CURDIR}/bin/image-recognition -conf ${CURDIR}/conf

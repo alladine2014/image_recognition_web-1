@@ -21,15 +21,59 @@ var (
 )
 
 type Config struct {
-	PSM       string
 	ConfigDir string
-	Port      int
-	Addr      string
 	YamlConfig
 }
 
 type YamlConfig struct {
-	Mysql *MySql `yaml:"mysql"`
+	Mysql      *MySql     `yaml:"mysql"`
+	PSM        string     `yaml:"psm"`
+	Port       int        `yaml:"port"`
+	Addr       string     `yaml:"addr"`
+	LoggerConf LoggerConf `yaml:"loggerconf"`
+}
+
+type LoggerConf struct {
+	Level       int    `yaml:"level"`
+	FileLog     bool   `yaml:"filelog"`
+	LogDir      string `yaml:"logdir"`
+	LogInterval string `yaml:"loginterval"`
+	ConsoleLog  bool   `yaml:"consolelog"`
+}
+
+func (c *Config) SetPSM(psm string) {
+	c.PSM = psm
+}
+
+func GetAddr() string {
+	return webConfig.Addr
+}
+
+func GetPort() int {
+	return webConfig.Port
+}
+
+func Level() int {
+	return webConfig.LoggerConf.Level
+}
+func PSM() string {
+	return webConfig.PSM
+}
+
+func LogDir() string {
+	return webConfig.LoggerConf.LogDir
+}
+
+func FileLog() bool {
+	return webConfig.LoggerConf.FileLog
+}
+
+func LogInterval() string {
+	return webConfig.LoggerConf.LogInterval
+}
+
+func ConsoleLog() bool {
+	return webConfig.LoggerConf.ConsoleLog
 }
 
 func GetMysql() *MySql {
@@ -66,10 +110,7 @@ func LoadConf() {
 }
 
 func parseFlags() {
-	flag.StringVar(&webConfig.Addr, "addr", "", "service addr.")
 	flag.StringVar(&webConfig.ConfigDir, "conf", "", "support config file.")
-	flag.IntVar(&webConfig.Port, "port", 0, "service port.")
-	flag.StringVar(&webConfig.PSM, "psm", "", "service port.")
 	flag.Parse()
 	if webConfig.ConfigDir == "" {
 		webConfig.ConfigDir = os.Getenv(_ENV_CONF_DIR)
@@ -78,12 +119,8 @@ func parseFlags() {
 		fmt.Fprintf(os.Stderr, "Conf dir is not specified, use -conf option or %s environment\n", _ENV_CONF_DIR)
 		usage()
 	}
-	if webConfig.PSM == "" {
-		webConfig.PSM = os.Getenv(_ENV_PSM)
-	}
-	if webConfig.PSM == "" {
-		fmt.Fprintf(os.Stderr, "PSM is not specified use -psm option or %s environment\n", _ENV_PSM)
-	}
+	psm := os.Getenv(_ENV_PSM)
+	webConfig.SetPSM(psm)
 }
 
 func usage() {
@@ -93,10 +130,6 @@ func usage() {
 
 func ConfigDir() string {
 	return webConfig.ConfigDir
-}
-
-func PSM() string {
-	return webConfig.PSM
 }
 
 func parseConf() {

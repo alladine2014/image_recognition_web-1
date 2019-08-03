@@ -1,5 +1,15 @@
+addr: "0.0.0.0"
+port: 8088
 mysql:
    dsn: "root:caoge@tcp(127.0.0.1:3306)/image_recognition"
    active: 10
    idle: 10
    idle_timeout: 3600s
+psm: "image.recongnition.web"
+loggerconf:
+    level: 0
+    filelog: true
+    logdir: "/home/caoge/dev/src/github.com/cgCodeLife/image_recognition_web/output/log"
+    loginterval: "hour"
+    consolelog: false
+

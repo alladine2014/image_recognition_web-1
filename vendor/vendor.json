@@ -7,6 +7,30 @@
 			"revision": ""
 		},
 		{
+			"checksumSHA1": "gTJHBxg302ewXlGo0jEWn934Jm4=",
+			"path": "github.com/Masterminds/squirrel",
+			"revision": "0f6e36219a8fcc357ecda912ddee5493b42062c7",
+			"revisionTime": "2019-08-01T21:47:10Z"
+		},
+		{
+			"checksumSHA1": "n2v3DUKOkw+Et3CCuXGUDqh7HZc=",
+			"path": "github.com/cgCodeLife/context",
+			"revision": "f58f8d75bd4d84fcfa2ac5ae7437d3b6859d4cc9",
+			"revisionTime": "2019-08-03T03:56:53Z"
+		},
+		{
+			"checksumSHA1": "OMw8j0zznql2FqhPWyhHJmf6IQ4=",
+			"path": "github.com/cgCodeLife/logs",
+			"revision": "6f36cd1e5e64f1b8bf37e4fd56fff10ef8654265",
+			"revisionTime": "2019-08-03T04:08:27Z"
+		},
+		{
+			"checksumSHA1": "mmMSKeFQxexF6/tupG6Ju4YU3bA=",
+			"path": "github.com/cgCodeLife/logs/env",
+			"revision": "6f36cd1e5e64f1b8bf37e4fd56fff10ef8654265",
+			"revisionTime": "2019-08-03T04:08:27Z"
+		},
+		{
 			"checksumSHA1": "qlEzrgKgIkh7y0ePm9BNo1cNdXo=",
 			"path": "github.com/gin-contrib/sse",
 			"revision": "54d8467d122d380a14768b6b4e5cd7ca4755938f",
@@ -53,6 +77,18 @@
 			"path": "github.com/json-iterator/go",
 			"revision": "27518f6661eba504be5a7a9a9f6d9460d892ade3",
 			"revisionTime": "2019-06-21T16:12:01Z"
+		},
+		{
+			"checksumSHA1": "ep2BurYaI2ZGnsXDIZe53Wzk/BI=",
+			"path": "github.com/lann/builder",
+			"revision": "47ae307949d02aa1f1069fdafc00ca08e1dbabac",
+			"revisionTime": "2018-08-02T20:07:27Z"
+		},
+		{
+			"checksumSHA1": "nR871nUQ6KxGoDR+TdgQhGUqcHI=",
+			"path": "github.com/lann/ps",
+			"revision": "62de8c46ede02a7675c4c79c84883eb164cb71e3",
+			"revisionTime": "2015-08-10T15:23:59Z"
 		},
 		{
 			"checksumSHA1": "74gCzvJiE6bXX3i4vIVCYhffDHc=",
