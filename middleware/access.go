@@ -54,12 +54,19 @@ func Response(mkey string, f MyHandler) gin.HandlerFunc {
 		c.Writer.Header().Set("Cache-Control", "max-age=0, no-cache, no-store, must-revalidate, proxy-revalidate")
 		c.Writer.Header().Set("Pragma", "no-cache") // http 1.0
 		c.Writer.Header().Set("Expires", "0")
-		c.JSON(http.StatusOK, data)
 		logs.CtxInfo(ctx, "request=%+v, response=%+v", c.Request, data)
 		tagkv["code"] = strconv.Itoa(data.Code)
 		if data.Code != errno.OK(nil).Code {
 			util.EmitError(mkey, tagkv)
 		}
+		logs.Infof("data path=%s", data.File)
+		if data.File != "" {
+			//stream transfer
+			c.File(data.File)
+			return
+		}
+		//json body
+		c.JSON(http.StatusOK, data)
 	}
 }
 

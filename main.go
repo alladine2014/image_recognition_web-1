@@ -26,6 +26,7 @@ func main() {
 	storage.Init()
 
 	r := ginex.Default()
+	r.OPTIONS("/image_recognition/v1/*path", handle.Options)
 	r.Use(middleware.Access())
 	g := r.Group("/image_recognition/v1")
 	g.GET("/face_video_info", middleware.Response("face.video.info", handle.GetFaceVideoInfo))

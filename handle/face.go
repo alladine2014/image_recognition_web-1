@@ -13,7 +13,7 @@ import (
 func GetFaceVideoInfo(c *gin.Context, ctx context.Context) errno.Payload {
 	io.Copy(ioutil.Discard, c.Request.Body) // discard body anyway
 	//query storage
-	req := &storage.GetFaceVideoInfoReq{}
+	req := storage.GetFaceVideoInfoReq{}
 	data, err := storage.GetFaceVideoInfo(ctx, req)
 	if err != nil {
 		logs.CtxError(ctx, "methd=GetFaceVideoInfo error=%s", err)

@@ -1,6 +1,8 @@
 package errno
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // error codes
 // 30xxx，网关分配的前两位，成功统一返回2000
@@ -13,7 +15,8 @@ var (
 	TooManyRequest    = Payload{Code: 30411, Message: "too many reqeust"}
 	InvalidTopAccount = Payload{Code: 30414, Message: "invalid top Account"}
 	InvalidTestHost   = Payload{Code: 30415, Message: "invalid test host"}
-
+	InvalidVid        = Payload{Code: 30416, Message: "invalid vid"}
+	InvalidTime       = Payload{Code: 30417, Message: "invalid start_time or end_time"}
 	// 5xx
 	InternalErr    = Payload{Code: 30500, Message: "internal error"}
 	GetFileErr     = Payload{Code: 30502, Message: "get file error"}
@@ -29,6 +32,7 @@ type Payload struct {
 	Code    int         `json:"code"`
 	Message string      `json:"message"`
 	Data    interface{} `json:"data,omitempty"`
+	File    string      `json:"-"`
 }
 
 // OK response success case
@@ -38,6 +42,10 @@ func OK(data interface{}) Payload {
 		Message: "success",
 		Data:    data,
 	}
+}
+
+func LocalStream(name string) Payload {
+	return Payload{Code: 2000, Message: "success", File: name}
 }
 
 // Error make paylaod support error type
