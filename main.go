@@ -48,6 +48,7 @@ func main() {
 	g.GET("/camera_info", middleware.Response("search.camera.info", handle.SearchCameraInfo))
 	g.POST("/vehicle_info", middleware.Response("add.vehicle.info", handle.AddVehicleInfo))
 	g.GET("/vehicle_info", middleware.Response("search.vehicle.info", handle.SearchVehicleInfo))
+	g.PUT("/vehicle_info", middleware.Response("search.vehicle.info", handle.UpdateVechicleInfo))
 
 	if err := r.Run(fmt.Sprintf("%s:%d", config.GetAddr(), config.GetPort())); err != nil {
 		logs.Fatalf("server exit with error=%s", err)
