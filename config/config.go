@@ -26,11 +26,12 @@ type Config struct {
 }
 
 type YamlConfig struct {
-	Mysql      *MySql     `yaml:"mysql"`
-	PSM        string     `yaml:"psm"`
-	Port       int        `yaml:"port"`
-	Addr       string     `yaml:"addr"`
-	LoggerConf LoggerConf `yaml:"loggerconf"`
+	Mysql         *MySql     `yaml:"mysql"`
+	PSM           string     `yaml:"psm"`
+	Port          int        `yaml:"port"`
+	Addr          string     `yaml:"addr"`
+	LoggerConf    LoggerConf `yaml:"loggerconf"`
+	AlgorithmHost string     `yaml:"algoritmhost"`
 }
 
 type LoggerConf struct {
@@ -39,6 +40,10 @@ type LoggerConf struct {
 	LogDir      string `yaml:"logdir"`
 	LogInterval string `yaml:"loginterval"`
 	ConsoleLog  bool   `yaml:"consolelog"`
+}
+
+func GetAlgorithmHost() string {
+	return webConfig.AlgorithmHost
 }
 
 func (c *Config) SetPSM(psm string) {

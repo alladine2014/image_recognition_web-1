@@ -30,6 +30,7 @@ var (
 	InvalidLocation     = Payload{Code: 30427, Message: "invalid location"}
 	ParseJsonError      = Payload{Code: 30428, Message: "parse json error"}
 	NotFoundRecord      = Payload{Code: 30429, Message: "not found record"}
+	InvalidBoudingBox   = Payload{Code: 30430, Message: "invalid boudingbox"}
 	// 5xx
 	InternalErr    = Payload{Code: 30500, Message: "internal error"}
 	GetFileErr     = Payload{Code: 30502, Message: "get file error"}
@@ -44,8 +45,9 @@ var (
 )
 
 var (
-	INVALID_VID = errors.New("InvalidVid")
-	NOT_FOUND   = errors.New("NotFound")
+	INVALID_VID        = errors.New("InvalidVid")
+	NOT_FOUND          = errors.New("NotFound")
+	INVALID_BOUDINGBOX = errors.New("InvalidBoudingBoxFormat")
 )
 
 // Payload defines http body for response

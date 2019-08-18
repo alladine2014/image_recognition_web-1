@@ -4,7 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/cgCodeLife/image_recognition_web/algorithm"
 	"github.com/cgCodeLife/image_recognition_web/errno"
+	"github.com/cgCodeLife/image_recognition_web/util"
 	"github.com/cgCodeLife/image_recognition_web/videolib"
 	"github.com/cgCodeLife/logs"
 )
@@ -80,11 +82,6 @@ type GetFrameFaceInfoReq struct {
 	Vid       string
 	StartTime string
 	EndTime   string
-}
-
-type GetFrameFaceInfoRes struct {
-	//image recognition field
-	TestField string
 }
 
 type GetFaceHistoryReq struct {
@@ -209,6 +206,119 @@ type SearchVehicleInfoRes struct {
 	Time    string `json:"time"`
 	Name    string `json:"name"`
 	Note    string `json:"note"`
+}
+
+type GetFrameFaceInfoRes struct {
+	Humans []HumanSt `json:"humans"`
+}
+
+type HumanSt struct {
+	Location BoudingBoxSt `json:"location"`
+	BaseInfo BaseInfoSt   `json:"base_info"`
+}
+
+type BoudingBoxSt struct {
+	UpperLeftX   float64 `json:"upper_left_x"`
+	UpperLeftY   float64 `json:"upper_left_y"`
+	BottomRightX float64 `json:"bottom_right_x"`
+	BottomRightY float64 `json:"bottom_right_y"`
+}
+
+type BaseInfoSt struct {
+	Id   string `json:"id"`
+	Pic  string `json:"pic"`
+	Name string `json:"name"`
+	Time string `json:"time"`
+	Note string `json:"note"`
+}
+
+type FaceRecordInfo struct {
+	Vid      string
+	HumanIds []string
+}
+
+func GetFaceInfo(ctx context.Context, faceInfo algorithm.FrameFaceRes) (GetFrameFaceInfoRes, []string, error) {
+	res := GetFrameFaceInfoRes{}
+	ids := make([]string, 0)
+	res.Humans = make([]HumanSt, 0)
+	for _, face := range faceInfo.Body.Face {
+		name := face.Classification
+		baseInfoRes, err := SearchFaceInfo(ctx, SearchFaceInfoReq{Name: name})
+		if err != nil {
+			return res, ids, err
+		}
+		if len(face.BoudingBox) != 4 {
+			return res, ids, errno.INVALID_BOUDINGBOX
+		}
+		res.Humans = append(res.Humans, HumanSt{
+			Location: BoudingBoxSt{
+				UpperLeftX:   face.BoudingBox[0],
+				UpperLeftY:   face.BoudingBox[1],
+				BottomRightX: face.BoudingBox[2],
+				BottomRightY: face.BoudingBox[3],
+			},
+			BaseInfo: BaseInfoSt{
+				Id:   baseInfoRes.HumanId,
+				Pic:  baseInfoRes.Pic,
+				Name: baseInfoRes.Name,
+				Time: baseInfoRes.Time,
+				Note: baseInfoRes.Note,
+			},
+		})
+		ids = append(ids, baseInfoRes.HumanId)
+	}
+	return res, ids, nil
+}
+
+func AddFrameFaceRecord(faceRecordInfo FaceRecordInfo) {
+	//get camera uid
+	cameraUid, err := getCameraUidByVid(faceRecordInfo.Vid)
+	if err != nil {
+		logs.Errorf("faceRecordInfo:%+v error=%s", err)
+		return
+	}
+	for _, id := range faceRecordInfo.HumanIds {
+		sql := `insert into ` + humanFaceRecordTable
+		sql += " (vid, human_id, time, credibility, uid) values("
+		sql += `"` + faceRecordInfo.Vid + `"`
+		sql += " ," + `"` + id + `"`
+		sql += " ," + `"` + util.GetTimeNow() + `"`
+		sql += " ,1.00"
+		sql += " ," + `"` + cameraUid + `"`
+		sql += ")"
+		err = storage.dbQueryWrite(context.TODO(), sql)
+		if err != nil {
+			logs.Errorf("sql=%s error=%s", sql, err)
+			continue
+		}
+	}
+}
+
+func getCameraUidByVid(vid string) (string, error) {
+	sql := "select uid from " + videoTable
+	sql += " where vid=" + `"` + vid + `"`
+	uid, err := storage.dbQuery(context.TODO(), SEARCH_CAMERA_UID, sql)
+	if err != nil {
+		return "", err
+	}
+	return uid.(string), nil
+}
+
+func searchCameraUid(stm *sql.Stmt) (string, error) {
+	var uid string
+	rows, err := stm.Query()
+	if err != nil {
+		logs.Errorf("query error=%s", err)
+		return uid, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		if err := rows.Scan(&uid); err != nil {
+			logs.Errorf("scan row error=%s", err)
+			return uid, err
+		}
+	}
+	return uid, nil
 }
 
 func UpdateVehicleInfo(ctx context.Context, req UpdateVehicleInfoReq, uid string) (UpdateVehicleInfoRes, error) {

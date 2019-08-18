@@ -26,16 +26,25 @@ func GetFrameFaceInfo(c *gin.Context, ctx context.Context) errno.Payload {
 		return errno.InternalErr
 	}
 	//get frame now we need image recognition result
-	data, err := algorithm.GetFrameInfo(frames)
+	data, err := algorithm.GetFrameFaceInfo(frames)
 	if err != nil {
 		logs.CtxError(ctx, "method=GetFrameFaceInfo error=%s", err)
 		return errno.InternalErr
 	}
-	//识别结果入库为历史查询做准备
-	//todo.....
-	res := storage.GetFrameFaceInfoRes{
-		TestField: string(data),
+	res, ids, err := storage.GetFaceInfo(ctx, data)
+	if err != nil {
+		logs.CtxError(ctx, "method=GetFrameFaceInfo error=%s", err)
+		if err == errno.INVALID_BOUDINGBOX {
+			return errno.InvalidBoudingBox
+		}
+		return errno.InternalErr
 	}
+	//record for history search
+	go storage.AddFrameFaceRecord(
+		storage.FaceRecordInfo{
+			Vid:      c.Query(VID),
+			HumanIds: ids,
+		})
 	return errno.OK(res)
 }
 
@@ -56,7 +65,7 @@ func GetFrameVehicleInfo(c *gin.Context, ctx context.Context) errno.Payload {
 		return errno.InternalErr
 	}
 	//get frame now we need image recognition result
-	data, err := algorithm.GetFrameInfo(frames)
+	data, err := algorithm.GetFrameVehicleInfo(frames)
 	if err != nil {
 		logs.CtxError(ctx, "method=GetFrameFaceInfo error=%s", err)
 		return errno.InternalErr
@@ -88,7 +97,7 @@ func GetFrameVehicleTrafficFlow(c *gin.Context, ctx context.Context) errno.Paylo
 		return errno.InternalErr
 	}
 	//get frame now we need image recognition result
-	data, err := algorithm.GetFrameInfo(frames)
+	data, err := algorithm.GetFrameVehicleInfo(frames)
 	if err != nil {
 		logs.CtxError(ctx, "method=GetFrameVehicleTrafficFlow error=%s", err)
 		return errno.InternalErr
@@ -120,7 +129,7 @@ func GetFrameVehicleAvgSpeed(c *gin.Context, ctx context.Context) errno.Payload 
 		return errno.InternalErr
 	}
 	//get frame now we need image recognition result
-	data, err := algorithm.GetFrameInfo(frames)
+	data, err := algorithm.GetFrameVehicleInfo(frames)
 	if err != nil {
 		logs.CtxError(ctx, "method=GetFrameVehicleAvgSpeed error=%s", err)
 		return errno.InternalErr

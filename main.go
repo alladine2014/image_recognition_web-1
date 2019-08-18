@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/cgCodeLife/image_recognition_web/algorithm"
 	"github.com/cgCodeLife/image_recognition_web/config"
 	"github.com/cgCodeLife/image_recognition_web/ginex"
 	"github.com/cgCodeLife/image_recognition_web/handle"
@@ -24,6 +25,7 @@ func main() {
 	ginex.SetMode("debug")
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	storage.Init()
+	algorithm.Init()
 
 	r := ginex.Default()
 	r.OPTIONS("/image_recognition/v1/*path", handle.Options)

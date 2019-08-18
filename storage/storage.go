@@ -41,6 +41,7 @@ const (
 	UPDATE_CAMERA_INFO     = 5001
 	SEARCH_CAMERA_INFO     = 5002
 	SEARCH_VEHICLE_INFO    = 5003
+	SEARCH_CAMERA_UID      = 5004
 )
 
 const (
@@ -519,6 +520,8 @@ func (s *Storage) dbQuery(ctx context.Context, tag int, sql string) (interface{}
 		return searchCameraInfo(stm)
 	case SEARCH_VEHICLE_INFO:
 		return searchVehicleInfo(stm)
+	case SEARCH_CAMERA_UID:
+		return searchCameraUid(stm)
 	default:
 		logs.CtxError(ctx, "not found method for sql=%s", sql)
 	}

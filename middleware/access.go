@@ -14,9 +14,10 @@ import (
 )
 
 const (
-	TAG_TRACEID = "X-Tt-Traceid"
-	TAG_PSM     = "X-Psm"
-	TAG_LOGID   = "K_LOGID"
+	TAG_TRACEID   = "X-Tt-Traceid"
+	TAG_PSM       = "X-Psm"
+	TAG_LOGID     = "K_LOGID"
+	TAG_REQUESTID = "X-Ai-Requestid"
 )
 
 type MyHandler func(c *gin.Context, ctx context.Context) errno.Payload
@@ -29,7 +30,8 @@ func Access() gin.HandlerFunc {
 		defer util.EmitLatency(createContext(getLogID(c)), mkey, time.Now(), tagkv)
 
 		logid := getLogID(c)
-		c.Writer.Header().Set("X-Ai-Requestid", logid)
+		c.Writer.Header().Set(TAG_REQUESTID, logid)
+		c.Writer.Header().Set(TAG_TRACEID, logid)
 
 		c.Next()
 	}
@@ -44,6 +46,7 @@ func Response(mkey string, f MyHandler) gin.HandlerFunc {
 		ctx = logs.CtxAddKVs(ctx, "method", c.Request.Method)
 		ctx = logs.CtxAddKVs(ctx, "url", c.Request.URL.String())
 		ctx = logs.CtxAddKVs(ctx, "remote_addr", c.Request.RemoteAddr)
+		ctx = logs.CtxAddKVs(ctx, TAG_TRACEID, getLogID(c))
 		data := f(c, ctx)
 
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "X-TT-Access, Content-Type, accept, content-disposition, content-range")
