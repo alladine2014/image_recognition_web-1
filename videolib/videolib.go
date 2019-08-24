@@ -6,11 +6,36 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"time"
 )
 
-type Frame []byte
+type Frame struct {
+	Data       []byte
+	TTL        int
+	CreateTime int64
+}
 
-func GetFrame(file, startTime, endTime string) ([]Frame, error) {
+func NewFrame(data []byte) *Frame {
+	return &Frame{
+		Data:       data,
+		TTL:        600,
+		CreateTime: time.Now().Unix(),
+	}
+}
+
+func (fr *Frame) Expired() bool {
+	if time.Now().Unix()-fr.CreateTime >= int64(fr.TTL) {
+		logs.Infof("test time ttl: diff=%d ttl=%d", time.Now().Unix()-fr.CreateTime, fr.TTL)
+		return true
+	}
+	return false
+}
+
+func (fr *Frame) GetData() []byte {
+	return fr.Data
+}
+
+func GetFrame(file, startTime, endTime string) (*Frame, error) {
 	os.Remove("image.png")
 	//version 1.0 use cmd directly
 	cmd := exec.Command("ffmpeg", "-i", file, "-ss", startTime, "-t", endTime, "-r", "1", "image.png")
@@ -24,5 +49,5 @@ func GetFrame(file, startTime, endTime string) ([]Frame, error) {
 		return nil, nil
 	}
 	logs.Infof("read data size=%d", len(data))
-	return []Frame{Frame(data)}, nil
+	return NewFrame(data), nil
 }

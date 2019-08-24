@@ -7,6 +7,7 @@ import (
 	"github.com/cgCodeLife/image_recognition_web/storage"
 	"github.com/cgCodeLife/logs"
 	"github.com/gin-gonic/gin"
+	"time"
 )
 
 func GetFrameFaceInfo(c *gin.Context, ctx context.Context) errno.Payload {
@@ -17,7 +18,8 @@ func GetFrameFaceInfo(c *gin.Context, ctx context.Context) errno.Payload {
 		return errno.InvalidTime
 	}
 	req := storage.GetFrameFaceInfoReq{Vid: c.Query(VID), StartTime: c.Query(START_TIME), EndTime: c.Query(END_TIME)}
-	frames, err := storage.GetFrameFaceInfo(ctx, req)
+	start := time.Now()
+	frame, err := storage.GetFrameFaceInfo(ctx, req)
 	if err != nil {
 		logs.CtxError(ctx, "method=GetFrameFaceInfo error=%s", err)
 		if err == errno.INVALID_VID {
@@ -25,12 +27,18 @@ func GetFrameFaceInfo(c *gin.Context, ctx context.Context) errno.Payload {
 		}
 		return errno.InternalErr
 	}
+	logs.CtxInfo(ctx, "GetFrameFaceInfo from storage record cost=%v", time.Since(start))
+
 	//get frame now we need image recognition result
-	data, err := algorithm.GetFrameFaceInfo(frames)
+	start = time.Now()
+	data, err := algorithm.GetFrameFaceInfo(frame)
 	if err != nil {
 		logs.CtxError(ctx, "method=GetFrameFaceInfo error=%s", err)
 		return errno.InternalErr
 	}
+	logs.CtxInfo(ctx, "GetFrameFaceInfo from algorithm cost=%v", time.Since(start))
+
+	start = time.Now()
 	res, ids, err := storage.GetFaceInfo(ctx, data)
 	if err != nil {
 		logs.CtxError(ctx, "method=GetFrameFaceInfo error=%s", err)
@@ -39,6 +47,8 @@ func GetFrameFaceInfo(c *gin.Context, ctx context.Context) errno.Payload {
 		}
 		return errno.InternalErr
 	}
+	logs.CtxInfo(ctx, "GetFaceInfo from storage cost=%v", time.Since(start))
+
 	//record for history search
 	go storage.AddFrameFaceRecord(
 		storage.FaceRecordInfo{

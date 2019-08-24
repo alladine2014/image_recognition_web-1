@@ -5,7 +5,10 @@ import (
 	"encoding/json"
 	"github.com/cgCodeLife/image_recognition_web/config"
 	"github.com/cgCodeLife/image_recognition_web/videolib"
+	"github.com/cgCodeLife/logs"
+	"io"
 	"io/ioutil"
+	"mime/multipart"
 	"net/http"
 )
 
@@ -35,45 +38,52 @@ type FaceSt struct {
 	Classification string    `classification`
 }
 
-func GetFrameVehicleInfo(frames []videolib.Frame) (string, error) {
+func GetFrameVehicleInfo(frame *videolib.Frame) (string, error) {
 	return "test data", nil
 }
 
-func GetFrameFaceInfo(frames []videolib.Frame) (FrameFaceRes, error) {
-	//debug
-	return FrameFaceRes{
-		Body: BodyInfo{
-			Face: []FaceSt{
-				{
-					BoudingBox: []float64{
-						1.1,
-						2.2,
-						3.3,
-						4.4,
-					},
-					Classification: "harden",
-				},
-			},
-		},
-	}, nil
+func GetFrameFaceInfo(frame *videolib.Frame) (FrameFaceRes, error) {
 	res := FrameFaceRes{}
-	url := host + "/pic_feed"
-	req, err := http.NewRequest("POST", url, bytes.NewReader([]byte(frames[0]))) //just handle first pic
+	requrl := "http://" + host + "/pic_feed"
+	binary := []byte(frame.GetData())
+	buf := new(bytes.Buffer)
+	writer := multipart.NewWriter(buf)
+	formFile, err := writer.CreateFormFile("file", "face.png")
+	if err != nil {
+		logs.Errorf("CreateFormFile error=%s", err)
+		return res, err
+	}
+	_, err = io.Copy(formFile, bytes.NewReader(binary))
+	if err != nil {
+		logs.Errorf("copy frame to formFile error=%s", err)
+		return res, err
+	}
+	contentType := writer.FormDataContentType()
+	writer.Close()
+	resp, err := http.Post(requrl, contentType, buf)
 	if err != nil {
 		return res, err
 	}
-	req.Header.Set("Content-Type", "application/octet-stream")
-	resp, err := client.Do(req)
-	if err != nil {
-		return res, err
-	}
+	// req, err := http.NewRequest("POST", url, bytes.NewReader([]byte(frames[0]))) //just handle first pic
+	// if err != nil {
+	// 	return res, err
+	// }
+	// req.Header.Set("Content-Type", "multipart/form-data")
+	// resp, err := client.Do(req)
+	// if err != nil {
+	// 	logs.Errorf("send request error=%s", err)
+	// 	return res, err
+	// }
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
+		logs.Errorf("read response error=%s", err)
 		return res, err
 	}
+	logs.Infof("response debug:%d", len(body))
 
 	if err = json.Unmarshal(body, &res); err != nil {
+		logs.Errorf("Unmarshal error=%s", err)
 		return res, err
 	}
 	return res, nil

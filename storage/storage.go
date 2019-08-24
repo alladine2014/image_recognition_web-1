@@ -28,6 +28,59 @@ var (
 	storage *Storage
 )
 
+type GCFrame struct {
+	frameId   []string
+	isRunning bool
+	lock      sync.RWMutex
+}
+
+func NewGCFrame() *GCFrame {
+	return &GCFrame{
+		frameId:   make([]string, 0),
+		isRunning: false,
+	}
+}
+func (gc *GCFrame) Run() {
+	gc.lock.RLock()
+	if gc.isRunning {
+		gc.lock.RUnlock()
+		return
+	}
+	gc.lock.RUnlock()
+	//set running
+	gc.lock.Lock()
+	gc.isRunning = true
+	gc.lock.Unlock()
+	for {
+		frameId := make([]string, 0)
+		for _, key := range gc.frameId {
+			frame, ok := storage.Get(key)
+			if !ok {
+				frameId = append(frameId, key)
+				continue
+			}
+			if expired := frame.Expired(); expired {
+				logs.Infof("key=%s will delete", key)
+				storage.Remove(key)
+			}
+		}
+		gc.lock.Lock()
+		gc.frameId = frameId
+		gc.lock.Unlock()
+		time.Sleep(60 * time.Second)
+	}
+}
+
+func (gc *GCFrame) Store(key string) {
+	gc.lock.Lock()
+	defer gc.lock.Unlock()
+	gc.frameId = append(gc.frameId, key)
+}
+
+var (
+	gcFrame *GCFrame
+)
+
 //tag info
 const (
 	GET_FACE_VIDEO_INFO    = 1000
@@ -141,63 +194,66 @@ type Storage struct {
 	cache *Cache
 }
 
-type FrameSet struct {
-	sync.Map
+func init() {
+	if gcFrame != nil {
+		return
+	}
+	gcFrame = NewGCFrame()
 }
-
-func (c *Cache) SearchFrame(vid, startTime, endTime string) ([]videolib.Frame, error) {
-	res, ok := c.Load(VIDEO_FRAME + vid)
+func (c *Cache) SearchFrame(vid, startTime, endTime string) (*videolib.Frame, error) {
+	index, err := c.getIndex(startTime, endTime)
+	if err != nil {
+		return nil, err
+	}
+	key := c.GetFrameIndexKey(c.GetFramePrefixKey(vid), index)
+	frame, ok := c.Load(key)
 	if ok {
-		frame, err := res.(*FrameSet).Search(startTime, endTime)
-		if err != nil {
-			logs.Warnf("method=Cache.Search query FrameSet.Search error=%s", err)
-			return nil, err
-		}
-		return frame, nil
+		return frame.(*videolib.Frame), nil
 	}
 	return nil, nil
 }
 
-func (c *Cache) PutFrame(vid, startTime, endTime string, frame []videolib.Frame) {
-	frameSet := &FrameSet{}
-	if err := frameSet.PutFrame(startTime, endTime, frame); err != nil {
-		return
-	}
-	c.Store(VIDEO_FRAME+vid, frameSet)
-}
-
-func (fs *FrameSet) Search(startTime, endTime string) ([]videolib.Frame, error) {
+func (c *Cache) getIndex(startTime, endTime string) (int, error) {
 	//conver startTime and endTime to index
-	begin, err := fs.getTimeOffset(startTime)
+	begin, err := c.getTimeOffset(startTime)
 	if err != nil {
-		return nil, err
+		return -1, err
 	}
-	end, err := fs.getTimeOffset(endTime)
+	end, err := c.getTimeOffset(endTime)
 	if err != nil {
-		return nil, err
+		return -1, err
 	}
 	if end <= begin {
-		return nil, errors.New("invalid time range")
+		return -1, errors.New("invalid time range")
 	}
-	index := fs.rangeToIndex(begin, end)
-	frame, err := fs.find(index)
+	index := c.rangeToIndex(begin, end)
+	return index, nil
+}
+
+func (c *Cache) Search(key, startTime, endTime string) (*videolib.Frame, error) {
+	//conver startTime and endTime to index
+	index, err := c.getIndex(startTime, endTime)
+	if err != nil {
+		return nil, err
+	}
+	frame, err := c.find(key, index)
 	if err != nil || frame == nil {
 		return nil, err
 	}
 	return frame, nil
 }
 
-func (fs *FrameSet) rangeToIndex(begin, end int) int {
+func (c *Cache) rangeToIndex(begin, end int) int {
 	return (begin + end) / 2
 }
 
-func (fs *FrameSet) PutFrame(startTime, endTime string, frame []videolib.Frame) error {
-	begin, err := fs.getTimeOffset(startTime)
+func (c *Cache) PutFrame(vid, startTime, endTime string, frame *videolib.Frame) error {
+	begin, err := c.getTimeOffset(startTime)
 	if err != nil {
 		logs.Errorf("method=PutFrame error=%s", err)
 		return err
 	}
-	end, err := fs.getTimeOffset(endTime)
+	end, err := c.getTimeOffset(endTime)
 	if err != nil {
 		logs.Errorf("method=PutFrame error=%s", err)
 		return err
@@ -206,13 +262,23 @@ func (fs *FrameSet) PutFrame(startTime, endTime string, frame []videolib.Frame) 
 		logs.Errorf("method=PutFrame error=%s", err)
 		return errors.New("invalid time range")
 	}
-	index := fs.rangeToIndex(begin, end)
-	logs.Infof("frameSet index=%d", index)
-	fs.Store(index, frame)
+	index := c.rangeToIndex(begin, end)
+	key := c.GetFrameIndexKey(c.GetFramePrefixKey(vid), index)
+	c.Store(key, frame)
+	gcFrame.Store(key)
+	logs.Infof("frame key=%s start_time=%s end_time=%s success", key, startTime, endTime)
 	return nil
 }
 
-func (fs *FrameSet) getTimeOffset(t string) (int, error) {
+func (c *Cache) GetFrameIndexKey(key string, index int) string {
+	return key + "_" + strconv.Itoa(index)
+}
+
+func (s *Cache) GetFramePrefixKey(vid string) string {
+	return VIDEO_FRAME + "_" + vid
+}
+
+func (c *Cache) getTimeOffset(t string) (int, error) {
 	//t format: hh:mm:ss eg: 01:10:10
 	tmp := strings.Split(t, ":")
 	if len(tmp) != 3 {
@@ -238,21 +304,22 @@ func (fs *FrameSet) getTimeOffset(t string) (int, error) {
 	return hTos + mTos + digitSecond, nil
 }
 
-func (fs *FrameSet) find(index int) ([]videolib.Frame, error) {
-	data, ok := fs.Load(index)
+func (c *Cache) find(key string, index int) (*videolib.Frame, error) {
+	data, ok := c.Load(key + strconv.Itoa(index))
 	if ok {
-		return data.([]videolib.Frame), nil
+		return data.(*videolib.Frame), nil
 	}
 	//find frame before FRAME_STEP
-	var res []videolib.Frame
+	var res *videolib.Frame
 	if index-FRAME_STEP >= 0 {
-		if tmp, ok := fs.Load(index - FRAME_STEP); ok {
-			res = tmp.([]videolib.Frame)
+		if tmp, ok := c.Load(key + strconv.Itoa(index-FRAME_STEP)); ok {
+			res = tmp.(*videolib.Frame)
+			return res, nil
 		}
 	}
 	//find frame in the future FRAME_STEP
-	if tmp, ok := fs.Load(index + FRAME_STEP); ok {
-		res = append(res, tmp.([]videolib.Frame)...)
+	if tmp, ok := c.Load(key + strconv.Itoa(index+FRAME_STEP)); ok {
+		res = tmp.(*videolib.Frame)
 	}
 	return res, nil
 }
@@ -306,6 +373,7 @@ func Init() {
 	go storage.loadVids()
 	//generate frames
 	go storage.loadVideoFrames()
+	go gcFrame.Run()
 }
 
 func (s *Storage) loadVids() {
@@ -338,7 +406,7 @@ func (s *Storage) loadVids() {
 	}
 	//set cache
 	for i := 0; i < len(vids); i++ {
-		s.cache.Store(VIDEO_PATH+vids[i], paths[i])
+		s.cache.Store(s.GetPathKey(vids[i]), paths[i])
 	}
 }
 
@@ -373,38 +441,31 @@ func (s *Storage) loadVideoFrames() {
 	}
 	//set cache
 	for i := 0; i < len(vids); i++ {
-		frameSet, err := s.getAllFrame(paths[i])
-		if err != nil {
-			logs.Errorf("vid=%s path=%s get frame error=%s", err)
-			continue
-		}
-		logs.Infof("Frame cache index=%s", VIDEO_FRAME+vids[i])
-		s.cache.Store(VIDEO_FRAME+vids[i], frameSet)
+		//you can concurrent running
+		s.cacheAllFrame(vids[i], paths[i])
 		total += 1
 	}
 }
 
-func (s *Storage) getAllFrame(path string) (*FrameSet, error) {
-	frameSet := &FrameSet{}
+func (s *Storage) cacheAllFrame(vid, path string) {
 	begin := "00:00:00"
-	//calculate the time length
 	end := begin
 	for {
 		end = s.addTime(begin, FRAME_STEP)
 		logs.Infof("begin=%s end=%s", begin, end)
-		res, err := videolib.GetFrame(path, begin, end)
+		frame, err := videolib.GetFrame(path, begin, end)
 		if err != nil {
-			logs.Errorf("path=%s begin=%s end=%s get frame error=%s", path, begin, end, err)
+			logs.Errorf("path=%s begin=%s end=%s vid=%s get frame error=%s", path, begin, end, vid, err)
 			continue
 		}
-		if res == nil {
+		if frame == nil {
 			break
 		}
-		frameSet.PutFrame(begin, end, res)
+		s.cache.PutFrame(vid, begin, end, frame)
 		begin = end
 	}
-	return frameSet, nil
 }
+
 func (s *Storage) close() {
 	s.db.Close()
 }
@@ -528,7 +589,7 @@ func (s *Storage) dbQuery(ctx context.Context, tag int, sql string) (interface{}
 	return nil, errors.New("not found")
 }
 
-func (s *Storage) SearchFrame(vid, startTime, endTime string) []videolib.Frame {
+func (s *Storage) SearchFrame(vid, startTime, endTime string) *videolib.Frame {
 	data, err := s.cache.SearchFrame(vid, startTime, endTime)
 	if err != nil {
 		return nil
@@ -536,12 +597,28 @@ func (s *Storage) SearchFrame(vid, startTime, endTime string) []videolib.Frame {
 	return data
 }
 
-func (s *Storage) CacheFrame(vid, startTime, endTime string, frame []videolib.Frame) {
+func (s *Storage) Get(key string) (*videolib.Frame, bool) {
+	frame, ok := s.cache.Load(key)
+	if !ok {
+		return nil, false
+	}
+	return frame.(*videolib.Frame), true
+}
+
+func (s *Storage) Remove(key string) {
+	s.cache.Delete(key)
+}
+
+func (s *Storage) CacheFrame(vid, startTime, endTime string, frame *videolib.Frame) {
 	s.cache.PutFrame(vid, startTime, endTime, frame)
 }
 
+func (s *Storage) GetPathKey(vid string) string {
+	return VIDEO_PATH + "_" + vid
+}
+
 func (s *Storage) GetVideoFile(vid string) string {
-	if res, ok := s.cache.Load(VIDEO_PATH + vid); ok {
+	if res, ok := s.cache.Load(s.GetPathKey(vid)); ok {
 		return res.(string)
 	}
 	return ""
@@ -556,7 +633,7 @@ func (s *Storage) GetUpdateVideoFile(vid string) (string, error) {
 	}
 	//update cache
 	if file != nil {
-		s.cache.Store(VIDEO_PATH+vid, file)
+		s.cache.Store(s.GetPathKey(vid), file)
 	}
 	return file.(string), nil
 }

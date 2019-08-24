@@ -567,7 +567,7 @@ func DelFaceInfo(ctx context.Context, req DeleteFaceInfoReq) error {
 	return nil
 }
 
-func GetFrameVehicleInfo(ctx context.Context, req GetFrameVehicleInfoReq) ([]videolib.Frame, error) {
+func GetFrameVehicleInfo(ctx context.Context, req GetFrameVehicleInfoReq) (*videolib.Frame, error) {
 	data := storage.SearchFrame(req.Vid, req.StartTime, req.EndTime)
 	if data == nil {
 		var err error
@@ -596,9 +596,10 @@ func GetFrameVehicleInfo(ctx context.Context, req GetFrameVehicleInfoReq) ([]vid
 	return data, nil
 }
 
-func GetFrameFaceInfo(ctx context.Context, req GetFrameFaceInfoReq) ([]videolib.Frame, error) {
+func GetFrameFaceInfo(ctx context.Context, req GetFrameFaceInfoReq) (*videolib.Frame, error) {
 	data := storage.SearchFrame(req.Vid, req.StartTime, req.EndTime)
 	if data == nil {
+		logs.CtxInfo(ctx, "star_time=%s end_time=%s not found in cache", req.StartTime, req.EndTime)
 		var err error
 		//get file by vid
 		file := storage.GetVideoFile(req.Vid)
