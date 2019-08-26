@@ -372,7 +372,7 @@ func Init() {
 	//load vid to cache
 	go storage.loadVids()
 	//generate frames
-	go storage.loadVideoFrames()
+	// go storage.loadVideoFrames()
 	go gcFrame.Run()
 }
 

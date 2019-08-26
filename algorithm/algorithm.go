@@ -46,6 +46,8 @@ func GetFrameFaceInfo(frame *videolib.Frame) (FrameFaceRes, error) {
 	res := FrameFaceRes{}
 	requrl := "http://" + host + "/pic_feed"
 	binary := []byte(frame.GetData())
+	//debug
+	ioutil.WriteFile("test.png", binary, 0644)
 	buf := new(bytes.Buffer)
 	writer := multipart.NewWriter(buf)
 	formFile, err := writer.CreateFormFile("file", "face.png")
@@ -80,7 +82,7 @@ func GetFrameFaceInfo(frame *videolib.Frame) (FrameFaceRes, error) {
 		logs.Errorf("read response error=%s", err)
 		return res, err
 	}
-	logs.Infof("response debug:%d", len(body))
+	logs.Infof("response debug info:%s", string(body))
 
 	if err = json.Unmarshal(body, &res); err != nil {
 		logs.Errorf("Unmarshal error=%s", err)

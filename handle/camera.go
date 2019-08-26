@@ -95,7 +95,7 @@ func parseAddCameraInfoReq(c *gin.Context) (storage.AddCameraInfoReq, error) {
 
 func SearchCameraInfo(c *gin.Context, ctx context.Context) errno.Payload {
 	if c.Query(CAMERA_ID) == "" {
-		return errno.InvalidCameraId
+		logs.CtxInfo(ctx, "like search")
 	}
 	req := storage.SearchCameraInfoReq{Uid: c.Query(CAMERA_ID)}
 	data, err := storage.SearchCameraInfo(ctx, req)

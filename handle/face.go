@@ -67,7 +67,7 @@ func AddFaceInfo(c *gin.Context, ctx context.Context) errno.Payload {
 func SearchFaceInfo(c *gin.Context, ctx context.Context) errno.Payload {
 	//参数校验
 	if c.Query(FACE_ID) == "" && c.Query(HUMAN_NAME) == "" {
-		return errno.InvalidFaceIdOrName
+		logs.CtxInfo(ctx, "like serch")
 	}
 	req := storage.SearchFaceInfoReq{HumanId: c.Query(FACE_ID), Name: c.Query(HUMAN_NAME)}
 	data, err := storage.SearchFaceInfo(ctx, req)

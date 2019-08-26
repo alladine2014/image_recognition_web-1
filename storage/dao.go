@@ -92,7 +92,8 @@ type GetFaceHistoryReq struct {
 
 type GetFaceHistoryRes struct {
 	Vid         string       `json:"vid"`
-	CameraInfo  CameraInfoSt `camera_info`
+	CameraInfo  CameraInfoSt `json:"camera_info`
+	Pic         string       `json:"pic"`
 	HumanId     string       `json:"id"` //human_id
 	Credibility float32      `json:"credibility"`
 	Time        string       `json:"time"`
@@ -243,13 +244,14 @@ func GetFaceInfo(ctx context.Context, faceInfo algorithm.FrameFaceRes) (GetFrame
 	res.Humans = make([]HumanSt, 0)
 	for _, face := range faceInfo.Body.Face {
 		name := face.Classification
-		baseInfoRes, err := SearchFaceInfo(ctx, SearchFaceInfoReq{Name: name})
+		ress, err := SearchFaceInfo(ctx, SearchFaceInfoReq{Name: name})
 		if err != nil {
 			return res, ids, err
 		}
 		if len(face.BoudingBox) != 4 {
 			return res, ids, errno.INVALID_BOUDINGBOX
 		}
+		baseInfoRes := ress[0] //only one
 		res.Humans = append(res.Humans, HumanSt{
 			Location: BoudingBoxSt{
 				UpperLeftX:   face.BoudingBox[0],
@@ -397,23 +399,25 @@ func AddVehicleInfo(ctx context.Context, req AddVehicleInfoReq) error {
 	return nil
 }
 
-func SearchFaceInfo(ctx context.Context, req SearchFaceInfoReq) (SearchFaceInfoRes, error) {
+func SearchFaceInfo(ctx context.Context, req SearchFaceInfoReq) ([]SearchFaceInfoRes, error) {
 	var sql string
 	if req.HumanId != "" {
 		sql = fmt.Sprintf("select human_id,pic,name,time,note from %s where human_id=%s", faceLibTable, req.HumanId)
-	} else {
+	} else if req.Name != "" {
 		sql = fmt.Sprintf("select human_id,pic,name,time,note from %s where name=%s", faceLibTable, `"`+req.Name+`"`)
+	} else {
+		sql = fmt.Sprintf("select human_id,pic,name,time,note from %s limit 1000", faceLibTable)
 	}
 	data, err := storage.dbQuery(ctx, SEARCH_FACE_INFO, sql)
 	if err != nil {
 		logs.CtxError(ctx, "sql=%s error=%s", sql, err)
-		return SearchFaceInfoRes{}, err
+		return nil, err
 	}
-	return data.(SearchFaceInfoRes), nil
+	return data.([]SearchFaceInfoRes), nil
 }
 
-func searchFaceInfo(stm *sql.Stmt) (SearchFaceInfoRes, error) {
-	res := SearchFaceInfoRes{}
+func searchFaceInfo(stm *sql.Stmt) ([]SearchFaceInfoRes, error) {
+	res := make([]SearchFaceInfoRes, 0)
 	rows, err := stm.Query()
 	if err != nil {
 		logs.Errorf("query error=%s", err)
@@ -421,17 +425,19 @@ func searchFaceInfo(stm *sql.Stmt) (SearchFaceInfoRes, error) {
 	}
 	defer rows.Close()
 	for rows.Next() {
-		if err := rows.Scan(&res.HumanId, &res.Pic, &res.Name, &res.Time, &res.Note); err != nil {
+		item := SearchFaceInfoRes{}
+		if err := rows.Scan(&item.HumanId, &item.Pic, &item.Name, &item.Time, &item.Note); err != nil {
 			logs.Errorf("scan row error=%s", err)
 			return res, err
 		}
+		res = append(res, item)
 	}
 	return res, nil
 }
 
 func AddCameraInfo(ctx context.Context, req AddCameraInfoReq) error {
 	sql := fmt.Sprintf("insert into %s (uid,mac,addr,lat,lon) values(%s,%s,%s,%s,%s)",
-		cameraTable, req.Uid, `"`+req.Mac+`"`, `"`+req.Addr+`"`, req.Lat, req.Lon)
+		cameraTable, `"`+req.Uid+`"`, `"`+req.Mac+`"`, `"`+req.Addr+`"`, req.Lat, req.Lon)
 	err := storage.dbQueryWrite(ctx, sql)
 	if err != nil {
 		logs.CtxError(ctx, "sql=%s error=%s", sql, err)
@@ -474,22 +480,27 @@ func UpdateCameraInfo(ctx context.Context, req UpdateCameraInfoReq, uid string) 
 	if err != nil {
 		return res, err
 	}
-	return UpdateCameraInfoRes(data), nil
+	return UpdateCameraInfoRes(data[0]), nil
 }
 
-func SearchCameraInfo(ctx context.Context, req SearchCameraInfoReq) (SearchCameraInfoRes, error) {
-	res := SearchCameraInfoRes{}
-	sql := fmt.Sprintf("select uid,mac,addr,lat,lon from %s where uid=%s", cameraTable, req.Uid)
+func SearchCameraInfo(ctx context.Context, req SearchCameraInfoReq) ([]SearchCameraInfoRes, error) {
+	res := make([]SearchCameraInfoRes, 0)
+	var sql string
+	if req.Uid != "" {
+		sql = fmt.Sprintf("select uid,mac,addr,lat,lon from %s where uid=%s", cameraTable, req.Uid)
+	} else {
+		sql = fmt.Sprintf("select uid,mac,addr,lat,lon from %s", cameraTable)
+	}
 	data, err := storage.dbQuery(ctx, SEARCH_CAMERA_INFO, sql)
 	if err != nil {
 		logs.CtxError(ctx, "sql=%s error=%s", sql, err)
 		return res, err
 	}
-	return data.(SearchCameraInfoRes), nil
+	return data.([]SearchCameraInfoRes), nil
 }
 
-func searchCameraInfo(stm *sql.Stmt) (SearchCameraInfoRes, error) {
-	res := SearchCameraInfoRes{}
+func searchCameraInfo(stm *sql.Stmt) ([]SearchCameraInfoRes, error) {
+	res := make([]SearchCameraInfoRes, 0)
 	rows, err := stm.Query()
 	if err != nil {
 		logs.Errorf("query error=%s", err)
@@ -497,10 +508,12 @@ func searchCameraInfo(stm *sql.Stmt) (SearchCameraInfoRes, error) {
 	}
 	defer rows.Close()
 	for rows.Next() {
-		if err := rows.Scan(&res.Uid, &res.Mac, &res.Addr, &res.Location.Lat, &res.Location.Lon); err != nil {
+		item := SearchCameraInfoRes{}
+		if err := rows.Scan(&item.Uid, &item.Mac, &item.Addr, &item.Location.Lat, &item.Location.Lon); err != nil {
 			logs.Errorf("scan row error=%s", err)
 			return res, err
 		}
+		res = append(res, item)
 	}
 	return res, nil
 }
@@ -553,7 +566,7 @@ func UpdateFaceInfo(ctx context.Context, req UpdateFaceInfoReq, humanId string) 
 	if err != nil {
 		return res, err
 	}
-	return UpdateFaceInfoRes(data), nil
+	return UpdateFaceInfoRes(data[0]), nil
 }
 
 func DelFaceInfo(ctx context.Context, req DeleteFaceInfoReq) error {
@@ -672,7 +685,7 @@ func GetFaceHistory(ctx context.Context, req GetFaceHistoryReq) ([]GetFaceHistor
 	//select from cache
 	//todo...
 	//select from db
-	sql := fmt.Sprintf("select a.vid, a.human_id, a.credibility, a.time, b.uid, b.addr, b.lat, b.lon from %s as a, %s as b where a.uid=b.uid and time>= %s and time<= %s ", humanFaceRecordTable, cameraTable, `"`+req.StartTime+`"`, `"`+req.EndTime+`"`)
+	sql := fmt.Sprintf("select a.vid, a.human_id, a.credibility, a.time, b.uid, b.addr, b.lat, b.lon, c.pic from %s as a, %s as b, %s as c where a.uid=b.uid and a.human_id=c.human_id and a.time>= %s and a.time<= %s ", humanFaceRecordTable, cameraTable, faceLibTable, `"`+req.StartTime+`"`, `"`+req.EndTime+`"`)
 	data, err := storage.dbQuery(ctx, GET_FACE_HISTORY, sql)
 	if err != nil {
 		logs.CtxError(ctx, "sql=%s error=%s", sql, err)
@@ -693,7 +706,7 @@ func getFaceHistory(stm *sql.Stmt) ([]GetFaceHistoryRes, error) {
 		item := GetFaceHistoryRes{}
 		if err := rows.Scan(&item.Vid, &item.HumanId, &item.Credibility, &item.Time, &item.CameraInfo.Id,
 			&item.CameraInfo.Addr, &item.CameraInfo.Location.Lat,
-			&item.CameraInfo.Location.Lon); err != nil {
+			&item.CameraInfo.Location.Lon, &item.Pic); err != nil {
 			logs.Errorf("scan row error=%s", err)
 			return res, err
 		}
