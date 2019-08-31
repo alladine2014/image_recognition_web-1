@@ -1,5 +1,5 @@
 package main
- 
+
 import (
 	"fmt"
 	"github.com/cgCodeLife/image_recognition_web/algorithm"

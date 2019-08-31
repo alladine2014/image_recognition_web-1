@@ -2,6 +2,7 @@ package handle
 
 import (
 	"context"
+	"encoding/base64"
 	"github.com/cgCodeLife/image_recognition_web/algorithm"
 	"github.com/cgCodeLife/image_recognition_web/errno"
 	"github.com/cgCodeLife/image_recognition_web/storage"
@@ -36,6 +37,7 @@ func GetFrameFaceInfo(c *gin.Context, ctx context.Context) errno.Payload {
 		logs.CtxError(ctx, "method=GetFrameFaceInfo error=%s", err)
 		return errno.InternalErr
 	}
+	pic := base64.StdEncoding.EncodeToString(frame.GetData())
 	logs.CtxInfo(ctx, "GetFrameFaceInfo from algorithm cost=%v", time.Since(start))
 
 	start = time.Now()
@@ -54,6 +56,7 @@ func GetFrameFaceInfo(c *gin.Context, ctx context.Context) errno.Payload {
 		storage.FaceRecordInfo{
 			Vid:      c.Query(VID),
 			HumanIds: ids,
+			Pic:      pic,
 		})
 	return errno.OK(res)
 }

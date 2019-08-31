@@ -29,7 +29,8 @@ type GetFaceVideoInfoRes struct {
 }
 
 type CameraInfoSt struct {
-	Id       string     `json:"id"`
+	Uid      string     `json:"id"`
+	Mac      string     `json:"mac"`
 	Addr     string     `json:"addr"`
 	Location LocationSt `json:"location"`
 }
@@ -91,12 +92,13 @@ type GetFaceHistoryReq struct {
 }
 
 type GetFaceHistoryRes struct {
-	Vid         string       `json:"vid"`
-	CameraInfo  CameraInfoSt `json:"camera_info`
-	Pic         string       `json:"pic"`
-	HumanId     string       `json:"id"` //human_id
-	Credibility float32      `json:"credibility"`
-	Time        string       `json:"time"`
+	Vid        string       `json:"vid"`
+	CameraInfo CameraInfoSt `json:"camera_info"`
+	BaseInfo   BaseInfoSt   `json:"base_info"`
+	Pic        string       `json:"pic"`
+	// HumanId     string       `json:"id"` //human_id
+	// Credibility float32      `json:"credibility"`
+	Time string `json:"time"`
 }
 
 type AddFaceInfoReq struct {
@@ -116,24 +118,19 @@ type UpdateFaceInfoReq struct {
 }
 
 type UpdateFaceInfoRes struct {
-	HumanId string `json:"id"`
-	Pic     string `json:"pic"`
-	Name    string `json:"name"`
-	Time    string `json:"time"`
-	Note    string `json:"note"`
+	BaseInfo   BaseInfoSt   `json:"base_info"`
+	CameraInfo CameraInfoSt `json:"camera_info"`
 }
 
 type SearchFaceInfoReq struct {
+	Vid     string
 	HumanId string
 	Name    string
 }
 
 type SearchFaceInfoRes struct {
-	HumanId string `json:"id"`
-	Pic     string `json:"pic"`
-	Name    string `json:"name"`
-	Time    string `json:"time"`
-	Note    string `json:"note"`
+	BaseInfo   BaseInfoSt   `json:"base_info"`
+	CameraInfo CameraInfoSt `json:"camera_info"`
 }
 
 type DeleteFaceInfoReq struct {
@@ -214,8 +211,9 @@ type GetFrameFaceInfoRes struct {
 }
 
 type HumanSt struct {
-	Location BoudingBoxSt `json:"location"`
-	BaseInfo BaseInfoSt   `json:"base_info"`
+	Location   BoudingBoxSt `json:"location"`
+	BaseInfo   BaseInfoSt   `json:"base_info"`
+	CameraInfo CameraInfoSt `json:"camera_info"`
 }
 
 type BoudingBoxSt struct {
@@ -236,6 +234,7 @@ type BaseInfoSt struct {
 type FaceRecordInfo struct {
 	Vid      string
 	HumanIds []string
+	Pic      string
 }
 
 func GetFaceInfo(ctx context.Context, faceInfo algorithm.FrameFaceRes) (GetFrameFaceInfoRes, []string, error) {
@@ -259,15 +258,10 @@ func GetFaceInfo(ctx context.Context, faceInfo algorithm.FrameFaceRes) (GetFrame
 				BottomRightX: face.BoudingBox[2],
 				BottomRightY: face.BoudingBox[3],
 			},
-			BaseInfo: BaseInfoSt{
-				Id:   baseInfoRes.HumanId,
-				Pic:  baseInfoRes.Pic,
-				Name: baseInfoRes.Name,
-				Time: baseInfoRes.Time,
-				Note: baseInfoRes.Note,
-			},
+			BaseInfo:   baseInfoRes.BaseInfo,
+			CameraInfo: baseInfoRes.CameraInfo,
 		})
-		ids = append(ids, baseInfoRes.HumanId)
+		ids = append(ids, baseInfoRes.BaseInfo.Id)
 	}
 	return res, ids, nil
 }
@@ -281,12 +275,13 @@ func AddFrameFaceRecord(faceRecordInfo FaceRecordInfo) {
 	}
 	for _, id := range faceRecordInfo.HumanIds {
 		sql := `insert into ` + humanFaceRecordTable
-		sql += " (vid, human_id, time, credibility, uid) values("
+		sql += " (vid, human_id, time, credibility, uid, pic) values("
 		sql += `"` + faceRecordInfo.Vid + `"`
 		sql += " ," + `"` + id + `"`
 		sql += " ," + `"` + util.GetTimeNow() + `"`
 		sql += " ,1.00"
 		sql += " ," + `"` + cameraUid + `"`
+		sql += " ," + `"` + faceRecordInfo.Pic + `"`
 		sql += ")"
 		err = storage.dbQueryWrite(context.TODO(), sql)
 		if err != nil {
@@ -401,12 +396,14 @@ func AddVehicleInfo(ctx context.Context, req AddVehicleInfoReq) error {
 
 func SearchFaceInfo(ctx context.Context, req SearchFaceInfoReq) ([]SearchFaceInfoRes, error) {
 	var sql string
-	if req.HumanId != "" {
-		sql = fmt.Sprintf("select human_id,pic,name,time,note from %s where human_id=%s", faceLibTable, req.HumanId)
-	} else if req.Name != "" {
-		sql = fmt.Sprintf("select human_id,pic,name,time,note from %s where name=%s", faceLibTable, `"`+req.Name+`"`)
+	if req.HumanId != "" && req.Vid != "" {
+		sql = fmt.Sprintf("select a.human_id, a.pic, a.name, a.time, a.note, b.uid, b.mac, b.addr, b.lat, b.lon from %s as a, %s as b, %s as c where a.human_id=%s, c.vid=%s and b.uid=c.uid ", faceLibTable, cameraTable, videoTable, req.HumanId, req.Vid)
+	} else if req.Name != "" && req.Vid != "" {
+		sql = fmt.Sprintf("select a.human_id, a.pic, a.name, a.time, a.note, b.uid, b.mac, b.addr, b.lat, b.lon from %s as a, %s as b, %s as c where a.name=%s, and c.vid=%s, and b.uid=c.uid ", faceLibTable, cameraTable, videoTable, `"`+req.Name+`"`, req.Vid)
+	} else if req.Vid != "" {
+		sql = fmt.Sprintf("select a.human_id, a.pic, a.name, a.time, a.note, b.uid, b.mac, b.addr, b.lat, b.lon from %s as a, %s as b, %s as c where c.vid=%s, and b.uid=c.uid limit 1000", faceLibTable, cameraTable, videoTable, req.Vid)
 	} else {
-		sql = fmt.Sprintf("select human_id,pic,name,time,note from %s limit 1000", faceLibTable)
+		sql = fmt.Sprintf("select a.human_id, a.pic, a.name, a.time, a.note, b.uid, b.mac, b.addr, b.lat, b.lon from %s as a, %s as b, %s as c where b.uid=c.uid limit 1000", faceLibTable, cameraTable, videoTable)
 	}
 	data, err := storage.dbQuery(ctx, SEARCH_FACE_INFO, sql)
 	if err != nil {
@@ -426,10 +423,16 @@ func searchFaceInfo(stm *sql.Stmt) ([]SearchFaceInfoRes, error) {
 	defer rows.Close()
 	for rows.Next() {
 		item := SearchFaceInfoRes{}
-		if err := rows.Scan(&item.HumanId, &item.Pic, &item.Name, &item.Time, &item.Note); err != nil {
+		baseInfo := BaseInfoSt{}
+		cameraInfo := CameraInfoSt{}
+		locationInfo := LocationSt{}
+		if err := rows.Scan(&baseInfo.Id, &baseInfo.Pic, &baseInfo.Name, &baseInfo.Time, &baseInfo.Note, &cameraInfo.Uid, &cameraInfo.Mac, &cameraInfo.Addr, &locationInfo.Lat, &locationInfo.Lon); err != nil {
 			logs.Errorf("scan row error=%s", err)
 			return res, err
 		}
+		item.BaseInfo = baseInfo
+		cameraInfo.Location = locationInfo
+		item.CameraInfo = cameraInfo
 		res = append(res, item)
 	}
 	return res, nil
@@ -685,7 +688,7 @@ func GetFaceHistory(ctx context.Context, req GetFaceHistoryReq) ([]GetFaceHistor
 	//select from cache
 	//todo...
 	//select from db
-	sql := fmt.Sprintf("select a.vid, a.human_id, a.credibility, a.time, b.uid, b.addr, b.lat, b.lon, c.pic from %s as a, %s as b, %s as c where a.uid=b.uid and a.human_id=c.human_id and a.time>= %s and a.time<= %s ", humanFaceRecordTable, cameraTable, faceLibTable, `"`+req.StartTime+`"`, `"`+req.EndTime+`"`)
+	sql := fmt.Sprintf("select a.vid, a.time, a.pic, b.uid, b.addr, b.lat, b.lon, c.human_id, c.pic, c.time, c.note, c.name from %s as a, %s as b, %s as c where a.uid=b.uid and a.human_id=c.human_id and a.time>= %s and a.time<= %s ", humanFaceRecordTable, cameraTable, faceLibTable, `"`+req.StartTime+`"`, `"`+req.EndTime+`"`)
 	data, err := storage.dbQuery(ctx, GET_FACE_HISTORY, sql)
 	if err != nil {
 		logs.CtxError(ctx, "sql=%s error=%s", sql, err)
@@ -704,9 +707,9 @@ func getFaceHistory(stm *sql.Stmt) ([]GetFaceHistoryRes, error) {
 	defer rows.Close()
 	for rows.Next() {
 		item := GetFaceHistoryRes{}
-		if err := rows.Scan(&item.Vid, &item.HumanId, &item.Credibility, &item.Time, &item.CameraInfo.Id,
+		if err := rows.Scan(&item.Vid, &item.Time, &item.Pic, &item.CameraInfo.Uid,
 			&item.CameraInfo.Addr, &item.CameraInfo.Location.Lat,
-			&item.CameraInfo.Location.Lon, &item.Pic); err != nil {
+			&item.CameraInfo.Location.Lon, &item.BaseInfo.Id, &item.BaseInfo.Pic, &item.BaseInfo.Time, &item.BaseInfo.Note, &item.BaseInfo.Name); err != nil {
 			logs.Errorf("scan row error=%s", err)
 			return res, err
 		}
@@ -738,7 +741,7 @@ func getFaceVideoInfo(stm *sql.Stmt) ([]GetFaceVideoInfoRes, error) {
 	defer rows.Close()
 	for rows.Next() {
 		item := GetFaceVideoInfoRes{}
-		if err := rows.Scan(&item.Vid, &item.CameraInfo.Id,
+		if err := rows.Scan(&item.Vid, &item.CameraInfo.Uid,
 			&item.CameraInfo.Addr, &item.CameraInfo.Location.Lat,
 			&item.CameraInfo.Location.Lon); err != nil {
 			logs.Errorf("scan row error=%s", err)
@@ -759,7 +762,7 @@ func getVehicleVideoInfo(stm *sql.Stmt) ([]GetVehicleVideoInfoRes, error) {
 	defer rows.Close()
 	for rows.Next() {
 		item := GetVehicleVideoInfoRes{}
-		if err := rows.Scan(&item.Vid, &item.CameraInfo.Id,
+		if err := rows.Scan(&item.Vid, &item.CameraInfo.Uid,
 			&item.CameraInfo.Addr, &item.CameraInfo.Location.Lat,
 			&item.CameraInfo.Location.Lon); err != nil {
 			logs.Errorf("scan row error=%s", err)

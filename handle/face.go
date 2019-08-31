@@ -69,6 +69,9 @@ func SearchFaceInfo(c *gin.Context, ctx context.Context) errno.Payload {
 	if c.Query(FACE_ID) == "" && c.Query(HUMAN_NAME) == "" {
 		logs.CtxInfo(ctx, "like serch")
 	}
+	if c.Query(VID) == "" {
+		logs.CtxWarn(ctx, "vid null")
+	}
 	req := storage.SearchFaceInfoReq{HumanId: c.Query(FACE_ID), Name: c.Query(HUMAN_NAME)}
 	data, err := storage.SearchFaceInfo(ctx, req)
 	if err != nil {

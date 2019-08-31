@@ -83,7 +83,6 @@ func GetFrameFaceInfo(frame *videolib.Frame) (FrameFaceRes, error) {
 		return res, err
 	}
 	logs.Infof("response debug info:%s", string(body))
-
 	if err = json.Unmarshal(body, &res); err != nil {
 		logs.Errorf("Unmarshal error=%s", err)
 		return res, err
