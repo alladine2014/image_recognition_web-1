@@ -62,6 +62,10 @@ func GetFrameFaceInfo(frame *videolib.Frame) (FrameFaceRes, error) {
 	}
 	contentType := writer.FormDataContentType()
 	writer.Close()
+	if err := writer.WriteField("id", "heyibing"); err != nil {
+		logs.Errorf("WriteField id=heyibing error=%s", err)
+		return res, err
+	}
 	resp, err := http.Post(requrl, contentType, buf)
 	if err != nil {
 		return res, err
