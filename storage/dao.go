@@ -266,6 +266,10 @@ func GetFaceInfo(ctx context.Context, faceInfo algorithm.FrameFaceRes) (GetFrame
 		if len(face.BoudingBox) != 4 {
 			return res, ids, errno.INVALID_BOUDINGBOX
 		}
+		if len(ress) == 0 {
+			logs.Warnf("name=%s not found from db", name)
+			continue
+		}
 		baseInfoRes := ress[0] //only one
 		res.Humans = append(res.Humans, HumanSt{
 			Location: BoudingBoxSt{
@@ -412,15 +416,33 @@ func AddVehicleInfo(ctx context.Context, req AddVehicleInfoReq) error {
 
 func SearchFaceInfo(ctx context.Context, req SearchFaceInfoReq) ([]SearchFaceInfoRes, error) {
 	var sql string
-	if req.HumanId != "" && req.Vid != "" {
-		sql = fmt.Sprintf("select a.human_id, a.pic, a.name, a.time, a.note, b.uid, b.mac, b.addr, b.lat, b.lon from %s as a, %s as b, %s as c where a.human_id=%s, c.vid=%s and b.uid=c.uid ", faceLibTable, cameraTable, videoTable, req.HumanId, req.Vid)
-	} else if req.Name != "" && req.Vid != "" {
-		sql = fmt.Sprintf("select a.human_id, a.pic, a.name, a.time, a.note, b.uid, b.mac, b.addr, b.lat, b.lon from %s as a, %s as b, %s as c where a.name=%s, and c.vid=%s, and b.uid=c.uid ", faceLibTable, cameraTable, videoTable, `"`+req.Name+`"`, req.Vid)
-	} else if req.Vid != "" {
-		sql = fmt.Sprintf("select a.human_id, a.pic, a.name, a.time, a.note, b.uid, b.mac, b.addr, b.lat, b.lon from %s as a, %s as b, %s as c where c.vid=%s, and b.uid=c.uid limit 1000", faceLibTable, cameraTable, videoTable, req.Vid)
+	var humanIdSearchCondition, nameSearchCondition, vidSearchCondition, searchCondition string
+	if req.HumanId == "" {
+		humanIdSearchCondition = ""
+	} else if req.Name != "" || req.Vid != "" {
+		humanIdSearchCondition = fmt.Sprintf("a.human_id=%s and", req.HumanId)
 	} else {
-		sql = fmt.Sprintf("select a.human_id, a.pic, a.name, a.time, a.note, b.uid, b.mac, b.addr, b.lat, b.lon from %s as a, %s as b, %s as c where b.uid=c.uid limit 1000", faceLibTable, cameraTable, videoTable)
+		humanIdSearchCondition = fmt.Sprintf("a.human_id=%s", req.HumanId)
 	}
+	if req.Name == "" {
+		nameSearchCondition = ""
+	} else if req.Vid != "" {
+		nameSearchCondition = fmt.Sprintf("a.name=%s and", req.Name)
+	} else {
+		nameSearchCondition = fmt.Sprintf("a.name=%s", req.Name)
+	}
+	if req.Vid == "" {
+		vidSearchCondition = ""
+	} else {
+		vidSearchCondition = fmt.Sprintf("b.vid=%s", req.Vid)
+	}
+	if req.HumanId == "" && req.Name == "" && req.Vid == "" { //default
+		// searchCondition = "b.vid ='v1111'"
+		searchCondition = ""
+	} else {
+		searchCondition = fmt.Sprintf("%s %s %s", humanIdSearchCondition, nameSearchCondition, vidSearchCondition)
+	}
+	sql = fmt.Sprintf("select a.human_id, a.pic, a.name, a.time, a.note, b.uid, b.mac, b.addr, b.lat, b.lon from %s as a, %s as b where %s", faceLibTable, cameraTable, searchCondition)
 	data, err := storage.dbQuery(ctx, SEARCH_FACE_INFO, sql)
 	if err != nil {
 		logs.CtxError(ctx, "sql=%s error=%s", sql, err)
