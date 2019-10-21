@@ -2,10 +2,11 @@ package logger
 
 import (
 	"fmt"
-	"github.com/cgCodeLife/image_recognition_web/config"
-	"github.com/cgCodeLife/logs"
 	"os"
 	"path/filepath"
+	"work/image_recognition_web-1/config"
+
+	"github.com/cgCodeLife/logs"
 )
 
 const (

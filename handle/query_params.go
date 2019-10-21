@@ -15,4 +15,5 @@ const (
 	ADDR       = "addr"
 	LAT        = "lat"
 	LON        = "lon"
+	// STREAM     = "stream"
 )

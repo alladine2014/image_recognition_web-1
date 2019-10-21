@@ -3,12 +3,13 @@ package handle
 import (
 	"context"
 	"encoding/json"
-	"github.com/cgCodeLife/image_recognition_web/errno"
-	"github.com/cgCodeLife/image_recognition_web/storage"
-	"github.com/cgCodeLife/logs"
-	"github.com/gin-gonic/gin"
 	"io"
 	"io/ioutil"
+	"work/image_recognition_web-1/errno"
+	"work/image_recognition_web-1/storage"
+
+	"github.com/cgCodeLife/logs"
+	"github.com/gin-gonic/gin"
 )
 
 type QueryDataSt struct {

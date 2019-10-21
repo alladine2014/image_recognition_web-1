@@ -3,11 +3,12 @@ package handle
 import (
 	"context"
 	"encoding/json"
-	"github.com/cgCodeLife/image_recognition_web/errno"
-	"github.com/cgCodeLife/image_recognition_web/storage"
+	"io/ioutil"
+	"work/image_recognition_web-1/errno"
+	"work/image_recognition_web-1/storage"
+
 	"github.com/cgCodeLife/logs"
 	"github.com/gin-gonic/gin"
-	"io/ioutil"
 )
 
 func AddCameraInfo(c *gin.Context, ctx context.Context) errno.Payload {

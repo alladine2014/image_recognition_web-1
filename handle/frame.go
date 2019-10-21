@@ -3,12 +3,14 @@ package handle
 import (
 	"context"
 	"encoding/base64"
-	"github.com/cgCodeLife/image_recognition_web/algorithm"
-	"github.com/cgCodeLife/image_recognition_web/errno"
-	"github.com/cgCodeLife/image_recognition_web/storage"
+	"time"
+	"work/image_recognition_web-1/algorithm"
+	"work/image_recognition_web-1/errno"
+
+	"work/image_recognition_web-1/storage"
+
 	"github.com/cgCodeLife/logs"
 	"github.com/gin-gonic/gin"
-	"time"
 )
 
 func GetFrameFaceInfo(c *gin.Context, ctx context.Context) errno.Payload {

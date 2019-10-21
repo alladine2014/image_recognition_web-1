@@ -4,10 +4,14 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/cgCodeLife/image_recognition_web/algorithm"
-	"github.com/cgCodeLife/image_recognition_web/errno"
-	"github.com/cgCodeLife/image_recognition_web/util"
-	"github.com/cgCodeLife/image_recognition_web/videolib"
+	"work/image_recognition_web-1/algorithm"
+
+	"work/image_recognition_web-1/errno"
+
+	"work/image_recognition_web-1/util"
+
+	"work/image_recognition_web-1/videolib"
+
 	"github.com/cgCodeLife/logs"
 )
 
@@ -143,6 +147,8 @@ type AddCameraInfoReq struct {
 	Lat  string `json:"lat"`
 	Lon  string `json:"lon"`
 	Addr string `json:"addr"`
+	// Stream string `json:"stream"`
+	// Vid    string `json:"vid"`
 }
 
 type UpdateCameraInfoReq struct {
@@ -151,6 +157,8 @@ type UpdateCameraInfoReq struct {
 	Lat  string `json:"lat"`
 	Lon  string `json:"lon"`
 	Addr string `json:"addr"`
+	// Stream string `json:"stream"`
+	// Vid    string `json:"vid"`
 }
 
 type UpdateCameraInfoRes struct {
@@ -158,16 +166,24 @@ type UpdateCameraInfoRes struct {
 	Mac      string     `json:"mac"`
 	Location LocationSt `json:"location"`
 	Addr     string     `json:"addr"`
+	// Stream   string     `json:"stream"`
+	// Vid      string     `json:"vid"`
 }
 type SearchCameraInfoReq struct {
 	Uid string
 }
+
+// type DeleteCameraInfoReq struct {
+// 	CameraID string
+// }
 
 type SearchCameraInfoRes struct {
 	Uid      string     `json:"id"`
 	Mac      string     `json:"mac"`
 	Location LocationSt `json:"location"`
 	Addr     string     `json:"addr"`
+	// Stream   string     `json:"stream"`
+	// Vid      string     `json:"vid"`
 }
 
 type AddVehicleInfoReq struct {
@@ -441,6 +457,9 @@ func searchFaceInfo(stm *sql.Stmt) ([]SearchFaceInfoRes, error) {
 func AddCameraInfo(ctx context.Context, req AddCameraInfoReq) error {
 	sql := fmt.Sprintf("insert into %s (uid,mac,addr,lat,lon) values(%s,%s,%s,%s,%s)",
 		cameraTable, `"`+req.Uid+`"`, `"`+req.Mac+`"`, `"`+req.Addr+`"`, req.Lat, req.Lon)
+	// sql := fmt.Sprintf("insert into %s (uid,mac,addr,lat,lon,stream,vid) values(%s,%s,%s,%s,%s,%s,%s)",
+	// 	cameraTable, `"`+req.Uid+`"`, `"`+req.Mac+`"`, `"`+req.Addr+`"`, req.Lat, req.Lon,
+	// 	`"`+req.Stream+`"`, `"`+req.Vid+`"`)
 	err := storage.dbQueryWrite(ctx, sql)
 	if err != nil {
 		logs.CtxError(ctx, "sql=%s error=%s", sql, err)
@@ -456,6 +475,7 @@ func UpdateCameraInfo(ctx context.Context, req UpdateCameraInfoReq, uid string) 
 	sql := `update ` + cameraTable + ` SET`
 	if req.Uid != "" {
 		sql += " uid=" + req.Uid
+		// sql += " uid=" + `"` + req.Uid + `"` + ","
 	}
 	if req.Mac != "" {
 		sql += " mac=" + `"` + req.Mac + `"` + ","
@@ -469,10 +489,19 @@ func UpdateCameraInfo(ctx context.Context, req UpdateCameraInfoReq, uid string) 
 	if req.Lon != "" {
 		sql += " lon=" + req.Lon + ","
 	}
+	// if req.Stream != "" {
+	// 	sql += " stream=" + `"` + req.Stream + `"` + ","
+	// }
+	// if req.Vid != "" {
+	// 	sql += " vid=" + `"` + req.Vid + `"` + ","
+	// }
 	if ',' == sql[len(sql)-1] {
 		sql = sql[0 : len(sql)-1]
 	}
 	sql += " where uid=" + uid
+	// sql += " where uid='" + uid + `'`
+	// logs.CtxError(ctx, "albin debug req=%s ", req)
+	// logs.CtxError(ctx, "albin debug sql=%s ", sql)
 	err := storage.dbQueryWrite(ctx, sql)
 	if err != nil {
 		logs.CtxError(ctx, "sql=%s error=%s", sql, err)
@@ -491,8 +520,10 @@ func SearchCameraInfo(ctx context.Context, req SearchCameraInfoReq) ([]SearchCam
 	var sql string
 	if req.Uid != "" {
 		sql = fmt.Sprintf("select uid,mac,addr,lat,lon from %s where uid=%s", cameraTable, req.Uid)
+		// sql = fmt.Sprintf("select uid,mac,addr,lat,lon,stream,vid from %s where uid='%s'", cameraTable, req.Uid)
 	} else {
 		sql = fmt.Sprintf("select uid,mac,addr,lat,lon from %s", cameraTable)
+		// sql = fmt.Sprintf("select uid,mac,addr,lat,lon,stream,vid from %s", cameraTable)
 	}
 	data, err := storage.dbQuery(ctx, SEARCH_CAMERA_INFO, sql)
 	if err != nil {
@@ -513,6 +544,7 @@ func searchCameraInfo(stm *sql.Stmt) ([]SearchCameraInfoRes, error) {
 	for rows.Next() {
 		item := SearchCameraInfoRes{}
 		if err := rows.Scan(&item.Uid, &item.Mac, &item.Addr, &item.Location.Lat, &item.Location.Lon); err != nil {
+			// if err := rows.Scan(&item.Uid, &item.Mac, &item.Addr, &item.Location.Lat, &item.Location.Lon, &item.Stream, &item.Vid); err != nil {
 			logs.Errorf("scan row error=%s", err)
 			return res, err
 		}
@@ -583,6 +615,17 @@ func DelFaceInfo(ctx context.Context, req DeleteFaceInfoReq) error {
 	return nil
 }
 
+// func DelCameraInfo(ctx context.Context, req DeleteCameraInfoReq) error {
+// 	sql := fmt.Sprintf("delete from %s where uid=%s",
+// 		cameraTable, req.CameraID)
+// 	err := storage.dbQueryWrite(ctx, sql)
+// 	if err != nil {
+// 		logs.CtxError(ctx, "sql=%s error=%s", sql, err)
+// 		return err
+// 	}
+// 	return nil
+// }
+
 func GetFrameVehicleInfo(ctx context.Context, req GetFrameVehicleInfoReq) (*videolib.Frame, error) {
 	data := storage.SearchFrame(req.Vid, req.StartTime, req.EndTime)
 	if data == nil {
@@ -614,12 +657,16 @@ func GetFrameVehicleInfo(ctx context.Context, req GetFrameVehicleInfoReq) (*vide
 
 func GetFrameFaceInfo(ctx context.Context, req GetFrameFaceInfoReq) (*videolib.Frame, error) {
 	data := storage.SearchFrame(req.Vid, req.StartTime, req.EndTime)
+	logs.Infof("GetFrameFaceInfo data.data:%s   data.TTL :%s   data.CreateTime: %s", string(data.Data), string(data.TTL), string(data.CreateTime))
+
 	if data == nil {
 		logs.CtxInfo(ctx, "star_time=%s end_time=%s not found in cache", req.StartTime, req.EndTime)
 		var err error
 		//get file by vid
 		file := storage.GetVideoFile(req.Vid)
+		logs.Infof("GetVideoFile: %s", file)
 		if file == "" {
+			logs.Infof("file is empty")
 			file, err = storage.GetUpdateVideoFile(req.Vid)
 			if err != nil {
 				logs.CtxError(ctx, "method=GetFrameFaceInfo error=%s", err)

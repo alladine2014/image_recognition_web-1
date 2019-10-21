@@ -2,16 +2,17 @@ package main
 
 import (
 	"fmt"
-	"github.com/cgCodeLife/image_recognition_web/algorithm"
-	"github.com/cgCodeLife/image_recognition_web/config"
-	"github.com/cgCodeLife/image_recognition_web/ginex"
-	"github.com/cgCodeLife/image_recognition_web/handle"
-	"github.com/cgCodeLife/image_recognition_web/logger"
-	"github.com/cgCodeLife/image_recognition_web/middleware"
-	"github.com/cgCodeLife/image_recognition_web/storage"
-	"github.com/cgCodeLife/logs"
 	"os"
 	"runtime"
+	"work/image_recognition_web-1/algorithm"
+	"work/image_recognition_web-1/config"
+	"work/image_recognition_web-1/ginex"
+	"work/image_recognition_web-1/handle"
+	"work/image_recognition_web-1/logger"
+	"work/image_recognition_web-1/middleware"
+	"work/image_recognition_web-1/storage"
+
+	"github.com/cgCodeLife/logs"
 )
 
 func init() {
@@ -48,6 +49,7 @@ func main() {
 	g.POST("/camera_info", middleware.Response("add.camera.info", handle.AddCameraInfo))
 	g.PUT("/camera_info", middleware.Response("update.camera.info", handle.UpdateCameraInfo))
 	g.GET("/camera_info", middleware.Response("search.camera.info", handle.SearchCameraInfo))
+	// g.DELETE("/camera_info", middleware.Response("delete.camera.info", handle.DelCameraInfo))
 	g.POST("/vehicle_info", middleware.Response("add.vehicle.info", handle.AddVehicleInfo))
 	g.GET("/vehicle_info", middleware.Response("search.vehicle.info", handle.SearchVehicleInfo))
 	g.PUT("/vehicle_info", middleware.Response("search.vehicle.info", handle.UpdateVechicleInfo))

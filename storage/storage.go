@@ -5,16 +5,19 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/cgCodeLife/image_recognition_web/config"
-	"github.com/cgCodeLife/image_recognition_web/errno"
-	"github.com/cgCodeLife/image_recognition_web/videolib"
-	"github.com/cgCodeLife/logs"
-	_ "github.com/go-sql-driver/mysql"
 	"os"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+	"work/image_recognition_web-1/config"
+
+	"work/image_recognition_web-1/errno"
+
+	"work/image_recognition_web-1/videolib"
+
+	"github.com/cgCodeLife/logs"
+	_ "github.com/go-sql-driver/mysql"
 )
 
 type Config struct {

@@ -2,8 +2,10 @@ package handle
 
 import (
 	"context"
-	"github.com/cgCodeLife/image_recognition_web/errno"
-	"github.com/cgCodeLife/image_recognition_web/storage"
+	"work/image_recognition_web-1/errno"
+
+	"work/image_recognition_web-1/storage"
+
 	"github.com/cgCodeLife/logs"
 	"github.com/gin-gonic/gin"
 )

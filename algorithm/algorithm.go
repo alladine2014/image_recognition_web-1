@@ -3,13 +3,16 @@ package algorithm
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/cgCodeLife/image_recognition_web/config"
-	"github.com/cgCodeLife/image_recognition_web/videolib"
-	"github.com/cgCodeLife/logs"
 	"io"
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
+
+	"work/image_recognition_web-1/config"
+
+	"work/image_recognition_web-1/videolib"
+
+	"github.com/cgCodeLife/logs"
 )
 
 var (
@@ -60,12 +63,12 @@ func GetFrameFaceInfo(frame *videolib.Frame) (FrameFaceRes, error) {
 		logs.Errorf("copy frame to formFile error=%s", err)
 		return res, err
 	}
-	contentType := writer.FormDataContentType()
-	writer.Close()
 	if err := writer.WriteField("id", "heyibing"); err != nil {
 		logs.Errorf("WriteField id=heyibing error=%s", err)
 		return res, err
 	}
+	contentType := writer.FormDataContentType()
+	writer.Close()
 	resp, err := http.Post(requrl, contentType, buf)
 	if err != nil {
 		return res, err
