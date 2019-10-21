@@ -427,14 +427,14 @@ func SearchFaceInfo(ctx context.Context, req SearchFaceInfoReq) ([]SearchFaceInf
 	if req.Name == "" {
 		nameSearchCondition = ""
 	} else if req.Vid != "" {
-		nameSearchCondition = fmt.Sprintf("a.name=%s and", req.Name)
+		nameSearchCondition = fmt.Sprintf("a.name=%s and", `"`+req.Name+`"`)
 	} else {
-		nameSearchCondition = fmt.Sprintf("a.name=%s", req.Name)
+		nameSearchCondition = fmt.Sprintf("a.name=%s", `"`+req.Name+`"`)
 	}
 	if req.Vid == "" {
 		vidSearchCondition = ""
 	} else {
-		vidSearchCondition = fmt.Sprintf("b.vid=%s", req.Vid)
+		vidSearchCondition = fmt.Sprintf("b.vid=%s", `"`+req.Vid+`"`)
 	}
 	if req.HumanId == "" && req.Name == "" && req.Vid == "" { //default
 		// searchCondition = "b.vid ='v1111'"
@@ -679,14 +679,11 @@ func GetFrameVehicleInfo(ctx context.Context, req GetFrameVehicleInfoReq) (*vide
 
 func GetFrameFaceInfo(ctx context.Context, req GetFrameFaceInfoReq) (*videolib.Frame, error) {
 	data := storage.SearchFrame(req.Vid, req.StartTime, req.EndTime)
-	logs.Infof("GetFrameFaceInfo data.data:%s   data.TTL :%s   data.CreateTime: %s", string(data.Data), string(data.TTL), string(data.CreateTime))
-
 	if data == nil {
 		logs.CtxInfo(ctx, "star_time=%s end_time=%s not found in cache", req.StartTime, req.EndTime)
 		var err error
 		//get file by vid
 		file := storage.GetVideoFile(req.Vid)
-		logs.Infof("GetVideoFile: %s", file)
 		if file == "" {
 			logs.Infof("file is empty")
 			file, err = storage.GetUpdateVideoFile(req.Vid)

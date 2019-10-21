@@ -2,11 +2,12 @@ package videolib
 
 import (
 	// "errors"
-	"github.com/cgCodeLife/logs"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"time"
+
+	"github.com/cgCodeLife/logs"
 )
 
 type Frame struct {
