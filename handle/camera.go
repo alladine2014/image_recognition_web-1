@@ -77,6 +77,10 @@ func parseUpdateCameraInfoReq(c *gin.Context) (storage.UpdateCameraInfoReq, erro
 			res.Lat = field.Value
 		case LON:
 			res.Lon = field.Value
+			// case STREAM:
+			// 	res.Stream = field.Value
+			// case VID:
+			// 	res.Vid = field.Value
 		}
 	}
 	return res, nil
@@ -106,3 +110,19 @@ func SearchCameraInfo(c *gin.Context, ctx context.Context) errno.Payload {
 	}
 	return errno.OK(data)
 }
+
+// func DelCameraInfo(c *gin.Context, ctx context.Context) errno.Payload {
+// 	if c.Query(CAMERA_ID) == "" {
+// 		return errno.InvalidCameraId
+// 	}
+// 	req := storage.DeleteCameraInfoReq{CameraID: c.Query(CAMERA_ID)}
+// 	err := storage.DelCameraInfo(ctx, req)
+// 	if err != nil {
+// 		logs.CtxError(ctx, "method=DeleteCameraInfo error=%s", err)
+// 		if err == errno.NOT_FOUND {
+// 			return errno.NotFoundRecord
+// 		}
+// 		return errno.DelDBErr
+// 	}
+// 	return errno.OK(nil)
+// }

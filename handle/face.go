@@ -68,7 +68,7 @@ func AddFaceInfo(c *gin.Context, ctx context.Context) errno.Payload {
 func SearchFaceInfo(c *gin.Context, ctx context.Context) errno.Payload {
 	//参数校验
 	if c.Query(FACE_ID) == "" && c.Query(HUMAN_NAME) == "" {
-		logs.CtxInfo(ctx, "like serch")
+		logs.CtxInfo(ctx, "like search")
 	}
 	if c.Query(VID) == "" {
 		logs.CtxWarn(ctx, "vid null")
